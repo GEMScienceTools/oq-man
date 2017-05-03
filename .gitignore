@@ -1,0 +1,7 @@
+__pycache__
+*.pyc
+*.*.swp
+dist
+*.so
+.coverage
+.DS_Store
