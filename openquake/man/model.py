@@ -75,6 +75,7 @@ def _get_model_info(srcl):
     trt_srcs = {}
     srcs_mmax = {}
     srcs_mmin = {}
+    n_srcs = {}
     for idx, src in enumerate(srcl):
         trt = src.tectonic_region_type
         typ = type(src).__name__
