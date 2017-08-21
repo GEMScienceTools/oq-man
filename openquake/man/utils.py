@@ -2,6 +2,7 @@ import pyproj
 import shapely.ops as ops
 from functools import partial
 
+SHEAR_MODULUS = 32e9 # Pascals
 
 def get_area(geom):
     """
@@ -20,3 +21,13 @@ def get_area(geom):
                                                  lat2=geom.bounds[3])),
                              geom)
     return geom_aea.area/1e6
+
+    
+def slip_from_mo(mo, area):
+    """
+    :parameter mo:
+        Scalar seismic moment [Nm]
+    :parameter area:
+        Area of the fault [km2]
+    """
+    return mo / (SHEAR_MODULUS * area*1e6)
