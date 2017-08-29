@@ -39,7 +39,7 @@ def _get_bb_mesh_from_simple_fs(fault, mesh_spacing):
     mesh = srfA.get_mesh()
     return mesh, bbox
 
-def fault_surface_distance(srcs, mesh_spacing,  types=None):
+def fault_surface_distance(srcs, mesh_spacing, types=None):
     """
     :parameter srcs:
     :parameter float mesh_spacing:
@@ -48,7 +48,8 @@ def fault_surface_distance(srcs, mesh_spacing,  types=None):
     """
     #
     # Fault distance array
-    lnkg = np.ones((len(srcs), len(srcs)))*100.
+    dmax = 40
+    lnkg = np.ones((len(srcs), len(srcs)))*dmax
     #
     # Check input information
     if types is None:
@@ -87,7 +88,7 @@ def fault_surface_distance(srcs, mesh_spacing,  types=None):
                     #
                     # Calculate the distance between the two fault surfaces
                     # (if needed)
-                    if (np.amin(tmpd) > 30.):
+                    if (np.amin(tmpd) > dmax):
                         mindst = np.amin(tmpd)
                     else:
                         mindst = 1e10
@@ -101,6 +102,7 @@ def fault_surface_distance(srcs, mesh_spacing,  types=None):
                     #
                     # Update the array
                     lnkg[idxA, idxB] = np.amin(tmpd)
+    assert len(lnkg) == len(srcs)
     return lnkg
 
 
