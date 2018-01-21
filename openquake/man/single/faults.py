@@ -9,7 +9,7 @@ from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.geodetic import distance, min_geodetic_distance
 
 
-def _get_bb_mesh_from_char_fs(fault, mesh_spacing):
+def _get_mesh_ch_from_char_fs(fault, mesh_spacing):
     """
     :parameter fault:
         An instance of the
@@ -18,11 +18,11 @@ def _get_bb_mesh_from_char_fs(fault, mesh_spacing):
         The spacing [km] of the grid used to represent the fault surface
     """
     srfA = fault.surface
-    bbox = srfA.get_bounding_box()
     mesh = srfA.get_mesh()
-    return mesh, bbox
+    chul = mesh.get_convex_hull()
+    return mesh, chul
 
-def _get_bb_mesh_from_simple_fs(fault, mesh_spacing):
+def _get_mesh_ch_from_simple_fs(fault, mesh_spacing):
     """
     :parameter fault:
         An instance of the
@@ -35,20 +35,22 @@ def _get_bb_mesh_from_simple_fs(fault, mesh_spacing):
                                     fault.lower_seismogenic_depth,
                                     fault.dip,
                                     mesh_spacing)
-    bbox = srfA.get_bounding_box()
     mesh = srfA.get_mesh()
-    return mesh, bbox
+    chul = mesh.get_convex_hull()
+    return mesh, chul
 
-def fault_surface_distance(srcs, mesh_spacing, types=None):
+def fault_surface_distance(srcs, mesh_spacing, types=None, dmax=40):
     """
     :parameter srcs:
+        A list of openquake sources
     :parameter float mesh_spacing:
         The spacing [km] of the grid used to represent the fault surface
     :parameter types:
+        The type of sources to be analysed
+    :parameter dmax:
     """
     #
     # Fault distance array
-    dmax = 40
     lnkg = np.ones((len(srcs), len(srcs)))*dmax
     #
     # Check input information
@@ -59,49 +61,46 @@ def fault_surface_distance(srcs, mesh_spacing, types=None):
     for idxA in range(0, len(srcs)):
         srcA = srcs[idxA]
         if isinstance(srcA, types):
+            #
+            # set the mesh for the first fault surface
             if isinstance(srcA, SimpleFaultSource):
-                meshA, bboxA = _get_bb_mesh_from_simple_fs(srcA, mesh_spacing)
+                meshA, chA = _get_mesh_ch_from_simple_fs(srcA, mesh_spacing)
             elif isinstance(srcA, CharacteristicFaultSource):
-                meshA, bboxA = _get_bb_mesh_from_char_fs(srcA, mesh_spacing)
+                meshA, chA = _get_mesh_ch_from_char_fs(srcA, mesh_spacing)
             else:
                 raise ValueError('Unsupported fault type')
             #
-            # Second loop
+            # second loop
             for idxB in range(idxA, len(srcs)):
                 srcB = srcs[idxB]
                 if isinstance(srcB, types):
+                    #
+                    # set the mesh for the second fault surface
                     if isinstance(srcB, SimpleFaultSource):
-                        meshB, bboxB = _get_bb_mesh_from_simple_fs(srcB,
+                        meshB, chB = _get_mesh_ch_from_simple_fs(srcB,
                                                                    mesh_spacing)
                     elif isinstance(srcB, CharacteristicFaultSource):
-                        meshB, bboxB = _get_bb_mesh_from_char_fs(srcB,
+                        meshB, chB = _get_mesh_ch_from_char_fs(srcB,
                                                                  mesh_spacing)
                     else:
                         raise ValueError('Unsupported fault type')
                     #
                     # Calculate the distance between the two bounding boxes
-                    tmpd = min_geodetic_distance(
-                        np.array([bboxA[0], bboxA[2], bboxA[0], bboxA[2]]),
-                        np.array([bboxA[1], bboxA[3], bboxA[3], bboxA[1]]),
-                        np.array([bboxB[0], bboxB[2], bboxB[0], bboxB[2]]),
-                        np.array([bboxB[1], bboxB[3], bboxB[3], bboxB[1]]))
+                    tmpd = min_geodetic_distance(chA.lons, chA.lats,
+                                                 chB.lons, chB.lats)
                     #
                     # Calculate the distance between the two fault surfaces
                     # (if needed)
                     if (np.amin(tmpd) > dmax):
                         mindst = np.amin(tmpd)
                     else:
-                        mindst = 1e10
-                        for lon, lat, dep in zip(meshB.lons.flatten(),
-                                                 meshB.lats.flatten(),
-                                                 meshB.depths.flatten()):
-                            tmpd = distance(meshA.lons, meshA.lats,
-                                            meshA.depths,
-                                            lon, lat, dep)
-                            mindst = min(mindst, np.amin(tmpd))
+                        mindst = np.amin(meshA.get_min_distance(meshB))
                     #
                     # Update the array
-                    lnkg[idxA, idxB] = np.amin(tmpd)
+                    lnkg[idxA, idxB] = mindst
+    #
+    # check that the size of the linkage matrix corresponds to the size of the
+    # initial list of fault sources
     assert len(lnkg) == len(srcs)
     return lnkg
 
@@ -231,7 +230,7 @@ def get_lengths(model, trt='.*'):
                 re.search(trt, src.tectonic_region_type)):
             lngths[src.source_id] = src.fault_trace.get_length()
         else:
-            ogging.warning('unsupported fault type', type(src).__name__)
+            logging.warning('unsupported fault type', type(src).__name__)
     return lngths
 
 

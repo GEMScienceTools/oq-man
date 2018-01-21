@@ -1,7 +1,7 @@
 """ :mod:`openquake.man.single.point` module. This module contains functions
 for computing general characteristics of gridded seismicity sources.
 Assumptions: (1) the nodes of the grid represent centroids of cells (2) the
-grid notes have a constant spacing (either in distance or long/lat). The
+grid nodes have a constant spacing (either in distance or long/lat). The
 spacing can be different along longitude and along latitude """
 
 import re
@@ -16,78 +16,158 @@ from openquake.hazardlib.geo.geodetic import azimuth
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 
 
-def get_rates_density(model, sidx, mmint=-11.0, mmaxt=11.0, trt='*', area=None):
+def generator_function(data):
+    for i in range(0, data.shape[0]):
+        yield (i, (data[i,0], data[i,1], data[i,0], data[i,1]))
+
+
+def get_spatial_index(points):
     """
+    """
+    #
+    # get point coordinates
+    coo = []
+    pidx = []
+    for i, p in enumerate(points):
+        lo = p.location.longitude
+        la = p.location.latitude
+        de = p.location.depth
+        coo.append((lo, la, de))
+    #
+    # checking if the model crosses the IDL
+    cooa = np.array(coo)
+    if any(cooa[:,0] > 179) and any(cooa[:,0] < -179):
+        logging.info('The model crosses the IDL. Fixing coordinates')
+        i1 = np.count_nonzero(cooa[:,0] < 180.)
+        i2 = np.count_nonzero(cooa[:,0] > 0.)
+        if i1 > i2:
+            #
+            # there are more points west of the IDL therefore we convert the
+            # ones east of the IDL
+            idx = np.nonzero((cooa[:,0] < 90) & (cooa[:,0] > -180.))
+            cooa[idx,0] = 360.+cooa[idx,0]
+    #
+    # creating the spatial index
+    #sidx = index.Index(generator_function(cooa))
+    sidx = index.Index()
+    for i in range(0, cooa.shape[0]):
+        sidx.insert(i, (cooa[i,0], cooa[i,1], cooa[i,0], cooa[i,1]))
+    #
+    # done!
+    return sidx, cooa
+
+
+def get_rates_density(model, mmint=-11.0, mmaxt=11.0, trt=set()):
+    """
+    This function computes the rates for each point source included in the
+    model (i.e. a list of :class:`openquake.hazardlib.source` instances.
+
     :parameter model:
         A list of openquake source point instances
-    :parameter sidx:
-        A rtree spatial index
     :parameter mmint:
         Minimum magnitude
     :parameter mmaxt:
         Minimum magnitude
     :parameter trt:
-        Tectonic region type keyword
+        A set of tectonic region keywords
     :returns:
         A (key, value) dictionary, where key is the source ID and value
         corresponds to density of the rate of occurrence [eqks/(yr*km2)]
     """
-    dens = {}
+    dens = []
     #
-    # compute the area of each cell of the grid
-    if area is None:
-        area = get_cell_areas(model, sidx)
+    # compute the area of each cell of the grid. This is done for all the cells
+    # without considering their TR
+    area, coloc, coo, sidx = get_cell_areas(model)
+    #
+    # checking results
+    assert len(area) == len(model)
+    #
+    #
+    areas = []
+    cidx = []
+    coo = []
     #
     #
     for cnt, src in enumerate(model):
-        if trt == src.tectonic_region_type:
+        #
+        # passes if the set is empty or the TR of the source matches the ones
+        # defined
+        if not trt == 0 or set(src.tectonic_region_type) & trt:
+            #
+            # rates for the point source
             trates = get_rates_within_m_range(src.mfd, mmint, mmaxt)
-            mmin, mmax = src.mfd.get_min_max_mag()
-            dens[src.source_id] = trates / area[src.source_id]
-            if abs(np.ceil(cnt/10000)*10000)-cnt < 1:
-                print ('WARNING:', cnt, len(model))
+            #
+            # find the nearest node
+            i = list(sidx.nearest((src.location.longitude,
+                                   src.location.latitude,
+                                   src.location.longitude,
+                                   src.location.latitude),1))
+            #
+            # compute the density
+            cidx.append(cnt)
+            if not np.isnan(area[i[0]]):
+                for tple in src.hypocenter_distribution.data:
+                    dens.append(trates / area[i[0]] * tple[0])
+                    areas.append(area[i[0]])
+                    coo.append((src.location.longitude,
+                                src.location.latitude,
+                                tple[1]))
+            else:
+                dens.append(0)
+                areas.append(0)
+                coo.append((src.location.longitude,
+                            src.location.latitude,
+                            0.0))
     #
     #
-    return dens, area
+    return dens, areas, cidx, coo
 
 
-def get_cell_areas(points, sidx):
+def get_cell_areas(points):
     """
+    Computes the area of each point source included in the `point` list.
+
     :parameter points:
+        A list of openquake source point instances
     :parameter sidx:
+        An rtree spatial index
 
     TODO: we need to add a test for the international date line since this is
         currently not supported. This might be simply solved by replacing
         the geographic coordinates in the spatial index with projected
         coordinates
     """
+    dlt_x = 0.3
+    dlt_z = 2.
+    dlt_info = 1e3
     #
-    # preparing the spatial index
-    sidx = index.Index()
-    #
-    # creating the list of coordinates and spatial index
-    coo = []
-    for idx, p in enumerate(points):
-        lo = p.location.longitude
-        la = p.location.latitude
-        sidx.insert(idx, (lo, la, lo, la))
-        coo.append((lo, la))
+    # create spatial index
+    sidx, coo = get_spatial_index(points)
     #
     # compute the area of each grid cell
     areas = []
     coloc = []
-    for lop, lap, in coo:
+    for i, (lop, lap, dep) in enumerate(list(coo)):
         #
-        # get the 5 nearest neighbors
-        nnidx = list(sidx.nearest((lop, lap, lop, lap), 20))
+        # get the nearest neighbours
+        #import pdb; pdb.set_trace()
+        nnidx = list(sidx.intersection((lop-dlt_x, lap-dlt_x,
+                                        lop+dlt_x, lap+dlt_x)))
         #
-        # get the coordinates of vertexes of the polygon
-        area, clc = _get_cell_area(lop, lap, coo, nnidx)
-        areas.append(areas)
+        # filter out points at depths other than the one of the point
+        fnnidx = []
+        for j in nnidx:
+            if abs(dep - coo[j,2]) < dlt_z:
+                fnnidx.append(j)
+        #
+        # get the area
+        area, clc = _get_cell_area(lop, lap, coo, fnnidx)
+        areas.append(area)
         coloc.append(clc)
     #
     #
-    return areas, coloc
+    return areas, coloc, coo, sidx
 
 
 def _get_cell_area(rlo, rla, coo, nnidx):
@@ -96,6 +176,9 @@ def _get_cell_area(rlo, rla, coo, nnidx):
     :parameter rla:
     :parameter coo:
     :parameter nnidx:
+
+    :return:
+
     """
     alo = [coo[idx][0] for idx in nnidx]
     ala = [coo[idx][1] for idx in nnidx]
@@ -113,6 +196,7 @@ def _get_cell_area(rlo, rla, coo, nnidx):
             if (abs(rlo - coo[idx][0]) < 0.005 and
                 abs(rla - coo[idx][1]) < 0.005):
                 colocated += 1
+                continue
         # East
         if abs(azi-90) < delta:
             if 90 in nearest_nodes:
@@ -151,10 +235,11 @@ def _get_cell_area(rlo, rla, coo, nnidx):
         out = (fdsts[0]+fdsts[2])/2*(fdsts[1]+fdsts[3])/2
     except:
         pass
-        print('Node:', rlo, rla)
-        print (nearest_nodes)
+        logging.debug('Node:', rlo, rla)
+        logging.debug('Nearest nodes:', nearest_nodes)
+        logging.debug('Queried nodes:')
         for idx in nnidx:
-            print ('  ', coo[idx][0], coo[idx][1])
+            logging.debug('  ', coo[idx][0], coo[idx][1], coo[idx][2])
     return out, colocated
 
 

@@ -5,7 +5,6 @@ import glob
 import numpy
 import pickle
 import logging
-import scipy.constants as const
 from rtree import index
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
@@ -19,15 +18,16 @@ from openquake.hazardlib.source import (PointSource, AreaSource,
 
 from pyproj import Proj, transform
 
+
 def getcoo(lon, lat):
     inProj = Proj(init='epsg:4326')
     outProj = Proj(init='epsg:3857')
     xp, yp = transform(inProj, outProj, lon, lat)
     return xp, yp
 
-def _get_source_model(source_file, inv_time, simple_mesh_spacing=1.0,
-                      complex_mesh_spacing=1.0, mfd_spacing=0.1,
-                      area_discretisation=10.):
+def _get_source_model(source_file, inv_time, simple_mesh_spacing=10.0,
+                      complex_mesh_spacing=10.0, mfd_spacing=10.,
+                      area_discretisation=20.):
     """
     Read and build a source model from an xml file
 

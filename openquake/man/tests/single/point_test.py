@@ -2,8 +2,6 @@
 import unittest
 import numpy as np
 
-from rtree import index
-
 from openquake.hazardlib.source import PointSource
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.tom import PoissonTOM
@@ -45,13 +43,9 @@ class TestGetGridAreas(unittest.TestCase):
         npd = PMF([(1.0, NodalPlane(0.0, 90.0, 0.0))])
         hdd = PMF([(0.7, 4.), (0.3, 8.0)])
         #
-        # prepare the spatial index
-        sidx = index.Index()
-        #
         # create the list of sources
         srcs = []
         for idx, (lon, lat, dep) in enumerate(zip(lons, lats, deps)):
-            sidx.insert(idx, (lon, lat, lon, lat))
             src = PointSource(source_id='1',
                               name='Test',
                               tectonic_region_type=TRT.ACTIVE_SHALLOW_CRUST,
@@ -67,7 +61,6 @@ class TestGetGridAreas(unittest.TestCase):
                               hypocenter_distribution=hdd)
             srcs.append(src)
         self.points = srcs
-        self.sidx = sidx
 
 
     def test01(self):
@@ -78,6 +71,5 @@ class TestGetGridAreas(unittest.TestCase):
         expected = np.array([43736430.1, 43736430.1, 43736430.1,
                              43774201.0, 43774201.0, 43774201.0,
                              43811937.7, 43811937.7, 43811937.7])/1e6
-        computed = get_cell_areas(self.points, self.sidx)
+        computed, _, _, _ = get_cell_areas(self.points)
         np.testing.assert_allclose(computed, expected, rtol=1e-2)
-
