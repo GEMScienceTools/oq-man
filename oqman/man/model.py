@@ -12,7 +12,7 @@ from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.nrml import SourceModelParser
 from openquake.hazardlib.geo.geodetic import distance, azimuth
-from openquake.hazardlib.source import (PointSource, AreaSource,
+from openquake.hazardlib.source import (AreaSource,
                                         SimpleFaultSource, ComplexFaultSource,
                                         CharacteristicFaultSource,
                                         NonParametricSeismicSource)
@@ -26,8 +26,9 @@ def getcoo(lon, lat):
     xp, yp = transform(inProj, outProj, lon, lat)
     return xp, yp
 
+
 def _get_source_model(source_file, inv_time, simple_mesh_spacing=10.0,
-                      complex_mesh_spacing=10.0, mfd_spacing=10.,
+                      complex_mesh_spacing=10.0, mfd_spacing=0.1,
                       area_discretisation=20.):
     """
     Read and build a source model from an xml file
@@ -46,7 +47,7 @@ def _get_source_model(source_file, inv_time, simple_mesh_spacing=10.0,
     return parser.parse_src_groups(source_file)
 
 
-def read(model_filename):
+def read(model_filename, get_info=True):
     """
     This reads the nrml file containing the model
 
@@ -63,7 +64,12 @@ def read(model_filename):
         for src in grp.sources:
             source_model.append(src)
     logging.info('The model contains %d sources' % (len(source_model)))
-    return source_model, _get_model_info(source_model)
+    #
+    # get info
+    info = None
+    if get_info:
+        info = _get_model_info(source_model)
+    return source_model,  info
 
 
 def _get_model_info(srcl):
@@ -76,7 +82,6 @@ def _get_model_info(srcl):
     trt_srcs = {}
     srcs_mmax = {}
     srcs_mmin = {}
-    n_srcs = {}
     for idx, src in enumerate(srcl):
         trt = src.tectonic_region_type
         typ = type(src).__name__
@@ -214,13 +219,11 @@ def store(filename, model, info=None):
                                0.,
                                src.location.longitude,
                                src.location.latitude,
-                               0.
-                              )
+                               0.)
                 azi = azimuth(l_points[0].location.longitude,
                               l_points[0].location.latitude,
                               src.location.longitude,
-                              src.location.latitude
-                             )
+                              src.location.latitude)
                 x = numpy.cos(numpy.radians(azi)) * dst
                 y = numpy.sin(numpy.radians(azi)) * dst
                 # update the spatial index
@@ -254,15 +257,15 @@ def _split_point_source(src):
     srcs = []
     for idx, tple in enumerate(src.hypocenter_distribution.data):
         tsrc = copy.deepcopy(src)
-        tsrc.source_id =  tsrc.source_id + "_{0:d}".format(idx)
+        tsrc.source_id = tsrc.source_id + "_{0:d}".format(idx)
         if isinstance(tsrc.mfd, TruncatedGRMFD):
             tsrc.mfd.a_val = numpy.log10(10.**tsrc.mfd.a_val * tple[0])
         elif isinstance(tsrc.mfd, EvenlyDiscretizedMFD):
-            print (tple[0])
+            print(tple[0])
             occ = [tmp * tple[0] for tmp in tsrc.mfd.occurrence_rates]
-            print (occ)
+            print(occ)
             tsrc.mfd.occurrence_rates = occ
-            print (tsrc.mfd.occurrence_rates)
+            print(tsrc.mfd.occurrence_rates)
             tsrc.hypocenter_distribution.data = PMF([(1.0, tple[1])])
         srcs.append(tsrc)
     return srcs
