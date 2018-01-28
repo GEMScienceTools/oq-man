@@ -12,8 +12,6 @@ def plot_mfd_cumulative(mfd, fig=None, label='', color=None, linewidth=1,
     if color is None:
         color = np.random.rand(3)
     plt.plot(aa[:, 0], cml[::-1], label=label, lw=linewidth, color=color)
-    plt.semilogy()
-    plt.grid(which='both')
     plt.title(title)
 
 
@@ -27,7 +25,6 @@ def plot_mfd(mfd, fig=None, label='', color=None, linewidth=1):
         plt.plot([mag-bw/2, mag+bw/2], [occ, occ], lw=2, color='grey')
         occs.append(occ)
     plt.plot(aa[:, 0], aa[:, 1], label=label, lw=linewidth)
-    plt.semilogy()
 
 
 def plot_models(models):
