@@ -1,6 +1,6 @@
 import unittest
 
-import oqman.man.utils as utils
+import openquake.man.utils as utils
 
 
 class TestSlipFromMo(unittest.TestCase):

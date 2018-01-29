@@ -1,7 +1,7 @@
 
 import unittest
 
-from oqman.man.single.areas import _get_area, get_rates_density
+from openquake.man.single.areas import _get_area, get_rates_density
 
 from shapely.wkt import loads
 

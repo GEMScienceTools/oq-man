@@ -1,7 +1,6 @@
 import numpy
 
 from oqmbt.tools.mfd import mag_to_mo
-from oqman.man.single.sources import get_discrete_mfds
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 
 

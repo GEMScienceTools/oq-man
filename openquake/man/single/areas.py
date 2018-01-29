@@ -1,10 +1,9 @@
 import re
 import pyproj
-import numpy
 import shapely.ops as ops
 from shapely.wkt import loads
 from functools import partial
-from oqman.man.mfd import get_rates_within_m_range
+from openquake.man.mfd import get_rates_within_m_range
 from openquake.hazardlib.source.area import AreaSource
 
 

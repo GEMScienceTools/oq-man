@@ -1,9 +1,9 @@
 
 import matplotlib.pyplot as plt
 
-from oqman.man.model import read
-from oqman.man.checks.plotting import plot_mfd_cumulative
-from oqman.man.checks.mfd import get_total_mfd
+from openquake.man.model import read
+from openquake.man.checks.plotting import plot_mfd_cumulative
+from openquake.man.checks.mfd import get_total_mfd
 
 from oqmbt.oqt_project import OQtProject
 from oqmbt.tools.mfd import get_evenlyDiscretizedMFD_from_truncatedGRMFD

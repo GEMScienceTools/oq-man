@@ -2,7 +2,7 @@
 import numpy as np
 import unittest
 
-from oqman.man.single.faults import fault_surface_distance
+from openquake.man.single.faults import fault_surface_distance
 
 from openquake.hazardlib.source import SimpleFaultSource
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD

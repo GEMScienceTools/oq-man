@@ -11,7 +11,7 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.mfd import TruncatedGRMFD
 
-from oqman.man.single.points import get_cell_areas
+from openquake.man.single.points import get_cell_areas
 
 
 class TestGetGridAreas(unittest.TestCase):

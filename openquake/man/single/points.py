@@ -9,7 +9,7 @@ import numpy as np
 
 from rtree import index
 
-from oqman.man.mfd import get_rates_within_m_range
+from openquake.man.mfd import get_rates_within_m_range
 from openquake.hazardlib.geo.geodetic import azimuth
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 

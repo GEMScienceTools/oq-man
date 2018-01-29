@@ -1,5 +1,5 @@
 """
-:module:`oqman.man.checks.mfd`
+:module:`openquake.man.checks.mfd`
 """
 
 import oqmbt.tools.mfd as mfdt
@@ -12,7 +12,7 @@ def get_total_mfd(sources, trt=None):
     :param list sources:
         A list of :class:`openquake.hazardlib.source.Source` instances
     :returns:
-        A :class:`oqman.man.checks.mfd.EEvenlyDiscretizedMFD` instance
+        A :class:`openquake.man.checks.mfd.EEvenlyDiscretizedMFD` instance
     """
     #
     #
