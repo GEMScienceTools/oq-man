@@ -1,0 +1,13 @@
+sudo: false
+
+language: python
+
+python:
+ - "3.5"
+
+install:
+  - pip install openquake.engine
+  - pip install .
+
+script:
+  - nosetests -vsx 
