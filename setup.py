@@ -36,6 +36,7 @@ setup(
     # matplotlib is brought by the openquake engine
     install_requires=[
         'openquake.engine',
+        'pyproj',
     ],
     python_requires='>=3',
     author='GEM Foundation',
