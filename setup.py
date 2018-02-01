@@ -36,6 +36,7 @@ setup(
     # matplotlib is brought by the openquake engine
     install_requires=[
         'openquake.engine',
+        'pyproj',
     ],
     python_requires='>=3',
     author='GEM Foundation',
@@ -51,10 +52,11 @@ setup(
         'Programming Language :: Python :: 3',
         'Topic :: Scientific/Engineering',
     ),
+    namespace_packages=['openquake'],
     keywords="seismic hazard",
     license="AGPL3",
     platforms=["any"],
-    package_data={"oqmbt": [
+    package_data={"openquake.man": [
         "README.md", "LICENSE"]},
     include_package_data=True,
     zip_safe=False,
